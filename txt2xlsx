@@ -1,0 +1,84 @@
+import pandas as pd
+import openpyxl 
+text_file_path = "assignment text/sampleinput.txt"
+def txt2xlsx(text_file_path):
+    
+    # Open txt file
+    with open(text_file_path, 'r') as file:
+        lines = file.readlines()  
+
+    # read job name 
+    job_name = None
+    for line in lines:
+        if "Job name: " in line:
+            job_name = line.strip().split(": ")[-1] 
+            break
+                
+    # Open Excel writer named after job
+    writer = pd.ExcelWriter(f"{job_name}.xlsx", engine='openpyxl')
+   
+    node_data = []
+    constrained_adaptivity_data = []
+    initial_stress_data = []
+    element_data=[]
+
+    # Process txt file for data tables
+    current_section = None
+    data_encounter= False 
+    for line in lines: 
+        if "*NODE" in line:
+            current_section = "Node"
+            data_encounter= False
+        elif "*CONSTRAINED_ADAPTIVITY" in line:
+            current_section = "constrained_adaptivity"
+            data_encounter=False
+        elif "*INITIAL_STRESS" in line:
+            current_section = "initial_stress"
+            data_encounter=False
+        elif"*ELEMENT" in line:
+            current_section="element"
+        elif not line.strip() or any(keyword in line for keyword in ["*NODE", "*CONSTRAINED_ADAPTIVITY", "*INITIAL_STRESS","*ELEMENT"]):
+            data_encountered = False  
+        elif current_section is not None and data_encounter:
+          
+            data = line.strip().split()  
+            if data: 
+                if current_section == "Node":
+                    node_data.append(data)
+      
+                elif current_section == "constrained_adaptivity":
+                    constrained_adaptivity_data.append(data)              
+                        
+                elif current_section == "initial_stress":
+                    initial_stress_data.append(data)
+
+                elif current_section == "element":
+                    element_data.append(data)
+
+            data_encounter = True  
+        if current_section is not None:
+            data = line.strip().split()  
+            if current_section == "Node":
+              node_data.append(data)
+
+            elif current_section == "constrained_adaptivity":
+                constrained_adaptivity_data.append(data)
+          
+            elif current_section=="element":
+              element_data.append(data)
+            elif current_section == "initial_stress":
+                initial_stress_data.append(data)
+            
+    # Write data to separate sheets in Excel
+    df_node = pd.DataFrame(node_data)
+    df_constrained_adaptivity = pd.DataFrame(constrained_adaptivity_data)
+    df_initial_stress = pd.DataFrame(initial_stress_data)
+
+    df_node.to_excel(writer, sheet_name='Node', index=False)
+    df_constrained_adaptivity.to_excel(writer, sheet_name='Constraint', index=False)
+    df_initial_stress.to_excel(writer, sheet_name='Stress', index=False)
+
+    # Close xlsx
+    writer.save()
+    print(f"Excel file created: {job_name}.xlsx")
+txt2xlsx(text_file_path)
